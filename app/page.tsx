@@ -1,101 +1,187 @@
+"use client";
+
 import Image from "next/image";
+import { toast } from "sonner";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { Image as ImageType } from "@/types";
+import { useDropzone } from "react-dropzone";
+import { useState, useCallback, useEffect } from "react";
+import { useImageStore } from "@/store/useImageStore";
 
-export default function Home() {
+export default function Page() {
+  const { isSignedIn, userId, getToken } = useAuth();
+  const { user } = useUser();
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [showAllImages, setShowAllImages] = useState(true);
+
+  const { images, uploading, fetchImages, uploadImages } = useImageStore();
+
+  useEffect(() => {
+    fetchImages();
+  }, [fetchImages]);
+
+  const displayedImages = showAllImages
+    ? images
+    : images.filter((image: ImageType) => image.userId === userId);
+
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview));
+    };
+  }, [previews]);
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 5) {
+        toast.error("Maximum 5 images allowed");
+        return;
+      }
+
+      const newPreviews = acceptedFiles.map((file) =>
+        URL.createObjectURL(file)
+      );
+      setPreviews((prevPreviews) => [...prevPreviews, ...newPreviews]);
+
+      try {
+        const token = await getToken();
+        if (!token || !userId) return;
+
+        await uploadImages(acceptedFiles, token, userId);
+        setPreviews([]);
+      } catch (error) {
+        console.error("Upload error:", error);
+      }
+    },
+    [userId, getToken, uploadImages]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".jpeg", ".jpg", ".png", ".gif"],
+    },
+    maxFiles: 5,
+  });
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="containermx-auto py-8 px-4 relative">
+      <div className="w-[80%] mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Upload Images
+          </h1>
+          <p>
+            Hello <span className="font-bold">{user?.firstName}</span>, you can
+            upload up to 5 images at once
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {!isSignedIn && (
+          <div>
+            <h1 className="shadow-md inline-block p-2 rounded-md">
+              Please sign in to upload images
+            </h1>
+          </div>
+        )}
+
+        {isSignedIn && (
+          <>
+            <div
+              {...getRootProps()}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+            >
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <p className="text-blue-500">Drop the images here...</p>
+              ) : (
+                <p>Drag & drop images here, or click to select files</p>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                Maximum 5 images allowed
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-end">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAllImages}
+                  onChange={(e) => setShowAllImages(e.target.checked)}
+                  className="mr-2"
+                />
+                Show all user images
+              </label>
+            </div>
+          </>
+        )}
+
+        {previews.length > 0 && (
+          <div className="mt-8 border-2 border-gray-300 rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-4">Preview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {previews.map((preview, index) => (
+                <div key={index} className="relative aspect-square">
+                  <Image
+                    src={preview}
+                    alt={`Preview ${index + 1}`}
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {displayedImages.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">
+              {showAllImages ? "All Uploaded Images" : "Your Uploaded Images"}
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {displayedImages.map((image) => (
+                <div
+                  key={image.id}
+                  className="relative w-full border-2 border-gray-300 rounded-lg p-4 shadow-md"
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <div className="relative h-5 w-5">
+                        <Image
+                          src={image.user.profileImage}
+                          alt={`${image.user.firstName}'s profile`}
+                          fill
+                          className="object-cover rounded-full"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 font-medium">
+                        <h1>{image.user.firstName}</h1>
+                        <h1>{image.user.lastName}</h1>
+                      </div>
+                    </div>
+                    <div className="relative aspect-square">
+                      <Image
+                        src={image.url}
+                        alt={`Uploaded by ${image.user.firstName}`}
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {uploading && (
+          <div className="mt-4 text-center absolute top-0 right-10">
+            <div className="inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-lg">
+              Uploading images...
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
