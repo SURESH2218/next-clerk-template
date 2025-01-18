@@ -48,11 +48,13 @@ export default function Page() {
 
         await uploadImages(acceptedFiles, token, userId);
         setPreviews([]);
+        await fetchImages();
+        setShowAllImages(true);
       } catch (error) {
         console.error("Upload error:", error);
       }
     },
-    [userId, getToken, uploadImages]
+    [userId, getToken, uploadImages, fetchImages]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

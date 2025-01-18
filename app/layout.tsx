@@ -21,7 +21,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className="relative">
         <body>
-          <header className="flex justify-end absolute top-5 right-5">
+          <header className="flex justify-end">
             <SignedOut>
               <SignInButton />
             </SignedOut>
